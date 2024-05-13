@@ -68,6 +68,29 @@ class ExpoVideoMetadataModule : Module() {
           val bitrate = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_BITRATE)?.toIntOrNull()
           val rotation = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull()
           val hasAudio = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_AUDIO) != null
+         val locationString = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_LOCATION)
+
+        if (locationString != null) {
+          // Split the string based on delimiter (e.g., comma) to get separate latitude and longitude values
+          val locationParts = locationString.split(",")
+          if (locationParts.size == 2) {
+            val latitude = locationParts[0].trim().toDoubleOrNull()
+            val longitude = locationParts[1].trim().toDoubleOrNull()
+            // Check if both latitude and longitude are valid doubles
+            if (latitude != null && longitude != null) {
+              // ... (use latitude and longitude)
+            } else {
+              // Handle the case where parsing failed
+              Log.w("VideoGps", "Failed to parse GPS coordinates from location string")
+            }
+          } else {
+            // Handle the case where the location string format is invalid
+            Log.w("VideoGps", "Invalid GPS location format in metadata")
+          }
+        } else {
+          // Handle the case where location data is not available
+          Log.i("VideoGps", "GPS location not found in video metadata")
+        }
 
           // release
           retriever.release()
@@ -120,7 +143,8 @@ class ExpoVideoMetadataModule : Module() {
               "audioSampleRate" to audioSampleRate,
               "audioCodec" to audioCodec,
               "codec" to videoCodec,
-              "fps" to frameRate
+              "fps" to frameRate,
+              "location" to locationString
             )
           )
         } catch (e: Exception) {
