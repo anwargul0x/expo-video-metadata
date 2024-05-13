@@ -70,27 +70,102 @@ class ExpoVideoMetadataModule : Module() {
           val hasAudio = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_AUDIO) != null
          val locationString = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_LOCATION)
 
-        if (locationString != null) {
-          // Split the string based on delimiter (e.g., comma) to get separate latitude and longitude values
-          val locationParts = locationString.split(",")
-          if (locationParts.size == 2) {
-            val latitude = locationParts[0].trim().toDoubleOrNull()
-            val longitude = locationParts[1].trim().toDoubleOrNull()
-            // Check if both latitude and longitude are valid doubles
-            if (latitude != null && longitude != null) {
-              // ... (use latitude and longitude)
-            } else {
-              // Handle the case where parsing failed
-              Log.w("VideoGps", "Failed to parse GPS coordinates from location string")
-            }
-          } else {
-            // Handle the case where the location string format is invalid
-            Log.w("VideoGps", "Invalid GPS location format in metadata")
-          }
-        } else {
-          // Handle the case where location data is not available
-          Log.i("VideoGps", "GPS location not found in video metadata")
-        }
+if (locationString != null) {
+  // Split the string based on delimiter (e.g., comma) to get separate latitude and longitude values
+  val locationParts = locationString.split(",")
+  if (locationParts.size == 2) {
+    val latitude = locationParts[0].trim().toDoubleOrNull()
+    val longitude = locationParts[1].trim().toDoubleOrNull()
+    // Check if both latitude and longitude are valid doubles
+    if (latitude != null && longitude != null) {
+      // Create the location object
+      val location = mapOf("latitude" to latitude, "longitude" to longitude)
+
+      // Update the promise resolution with the location object
+      promise.resolve(
+        mapOf(
+          "audioChannels" to audioChannels,
+          "duration" to duration,
+          "width" to width,
+          "height" to height,
+          "bitrate" to bitrate,
+          "fileSize" to fileSize,
+          "hasAudio" to hasAudio,
+          "audioCodec" to audioCodec,
+          "orientation" to getOrientation(rotation),
+          "audioSampleRate" to audioSampleRate,
+          "audioCodec" to audioCodec,
+          "codec" to videoCodec,
+          "fps" to frameRate,
+          // Include the location object
+          "location" to location
+        )
+      )
+    } else {
+      // Handle the case where parsing failed
+      Log.w("VideoGps", "Failed to parse GPS coordinates from location string")
+      promise.resolve( // Resolve even with parsing error (optional)
+        mapOf(
+          "audioChannels" to audioChannels,
+          "duration" to duration,
+          "width" to width,
+          "height" to height,
+          "bitrate" to bitrate,
+          "fileSize" to fileSize,
+          "hasAudio" to hasAudio,
+          "audioCodec" to audioCodec,
+          "orientation" to getOrientation(rotation),
+          "audioSampleRate" to audioSampleRate,
+          "audioCodec" to audioCodec,
+          "codec" to videoCodec,
+          "fps" to frameRate,
+          "location" to locationString // Include the raw location string (optional)
+        )
+      )
+    }
+  } else {
+    // Handle the case where the location string format is invalid
+    Log.w("VideoGps", "Invalid GPS location format in metadata")
+    promise.resolve( // Resolve even with invalid format (optional)
+      mapOf(
+        "audioChannels" to audioChannels,
+        "duration" to duration,
+        "width" to width,
+        "height" to height,
+        "bitrate" to bitrate,
+        "fileSize" to fileSize,
+        "hasAudio" to hasAudio,
+        "audioCodec" to audioCodec,
+        "orientation" to getOrientation(rotation),
+        "audioSampleRate" to audioSampleRate,
+        "audioCodec" to audioCodec,
+        "codec" to videoCodec,
+        "fps" to frameRate,
+        "location" to locationString // Include the raw location string (optional)
+      )
+    )
+  }
+} else {
+  // Handle the case where location data is not available
+  Log.i("VideoGps", "GPS location not found in video metadata")
+  promise.resolve( // Resolve even with location not found (optional)
+    mapOf(
+      "audioChannels" to audioChannels,
+      "duration" to duration,
+      "width" to width,
+      "height" to height,
+      "bitrate" to bitrate,
+      "fileSize" to fileSize,
+      "hasAudio" to hasAudio,
+      "audioCodec" to audioCodec,
+      "orientation" to getOrientation(rotation),
+      "audioSampleRate" to audioSampleRate,
+      "audioCodec" to audioCodec,
+      "codec" to videoCodec,
+      "fps" to frameRate
+    )
+  )
+}
 
           // release
           retriever.release()
