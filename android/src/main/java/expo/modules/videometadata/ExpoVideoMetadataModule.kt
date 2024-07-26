@@ -17,6 +17,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.io.File
 import android.media.MediaExtractor
+import android.media.MediaFeature
 import android.media.MediaFormat
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -92,6 +93,15 @@ class ExpoVideoMetadataModule : Module() {
           Log.i("VideoGps", "GPS location not found in video metadata")
         }
 
+          val colorTransfer = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_COLOR_TRANSFER)?.toIntOrNull()
+          var isHDR: Boolean? = null
+          if (colorTransfer != null) {
+            isHDR = colorTransfer == MediaFormat.COLOR_TRANSFER_ST2084 || colorTransfer == MediaFormat.COLOR_TRANSFER_HLG
+          }
+
+          // Extract GPS location
+          val location = extractGPSLocation(retriever)
+
           // release
           retriever.release()
 
@@ -138,6 +148,7 @@ class ExpoVideoMetadataModule : Module() {
               "bitrate" to bitrate,
               "fileSize" to fileSize,
               "hasAudio" to hasAudio,
+              "isHDR" to isHDR,
               "audioCodec" to audioCodec,
               "orientation" to getOrientation(rotation),
               "audioSampleRate" to audioSampleRate,
@@ -162,6 +173,44 @@ class ExpoVideoMetadataModule : Module() {
         Log.e(TAG, "The scope does not have a job in it")
       }
     }
+  }
+
+  private fun extractGPSLocation(retriever: MediaMetadataRetriever): Map<String, Double>? {
+    val locationString = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_LOCATION)
+    Log.d(TAG, "Raw location string: $locationString")
+
+    if (locationString != null) {
+      // Remove the leading "+" and trailing "/"
+      val cleanedString = locationString.trim('+', '/')
+
+      // Split the string into components
+      val parts = cleanedString.split("+")
+
+      if (parts.size >= 2) {
+        val latitude = parts[0].toDoubleOrNull()
+        val longitude = parts[1].toDoubleOrNull()
+        val altitude = if (parts.size >= 3) parts[2].toDoubleOrNull() else null
+
+        if (latitude != null && longitude != null) {
+          Log.d(TAG, "Parsed location: lat=$latitude, lon=$longitude, alt=$altitude")
+          return buildMap {
+            put("latitude", latitude)
+            put("longitude", longitude)
+            if (altitude != null) {
+              put("altitude", altitude)
+            }
+          }
+        } else {
+          Log.w(TAG, "Failed to parse GPS coordinates from location string")
+        }
+      } else {
+        Log.w(TAG, "Invalid GPS location format in metadata")
+      }
+    } else {
+      Log.i(TAG, "GPS location not found in video metadata")
+    }
+
+    return null
   }
 
   private fun isAllowedToRead(url: String): Boolean {
